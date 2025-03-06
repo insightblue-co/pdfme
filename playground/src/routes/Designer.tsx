@@ -47,12 +47,23 @@ function DesignerApp() {
         template = templateJson;
       }
 
+      if(template?.schemas[0]?.length > 0) {
+        template.schemas.map((schema) => {
+          schema.map((s) => {
+            s.fontName = 'Sarabun';
+          });
+        });
+        console.log(template)
+      }else{
+        console.log(template)
+      }
+
       designer.current = new Designer({
         domContainer: designerRef.current,
         template,
         options: {
           font: getFontsData(),
-          lang: 'en',
+          lang: 'th',
           labels: {
             'signature.clear': "🗑️",
           },
@@ -75,6 +86,7 @@ function DesignerApp() {
   }, [searchParams, setSearchParams]);
 
   const onChangeBasePDF = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('hi')
     if (e.target.files?.[0]) {
       readFile(e.target.files[0], "dataURL").then(async (basePdf) => {
         if (designer.current) {
@@ -174,6 +186,8 @@ function DesignerApp() {
   useEffect(() => {
     if (designerRef.current) {
       buildDesigner();
+      console.log('edit')
+
     }
     return () => {
       designer.current?.destroy();

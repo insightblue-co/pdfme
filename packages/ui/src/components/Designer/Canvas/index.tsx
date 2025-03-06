@@ -10,21 +10,25 @@ import React, {
   useCallback,
 } from 'react';
 import { theme, Button } from 'antd';
-import { OnDrag, OnResize, OnClick, OnRotate } from 'react-moveable';
+// Define the types locally since the imports are causing issues
+type OnDrag = any;
+type OnResize = any;
+type OnClick = any;
+type OnRotate = any;
 import { ZOOM, SchemaForUI, Size, ChangeSchemas, BasePdf, isBlankPdf, replacePlaceholders } from '@pdfme/common';
-import { PluginsRegistry } from '../../../contexts';
+import { PluginsRegistry } from '../../../contexts.js';
 import { X } from 'lucide-react';
-import { RULER_HEIGHT, RIGHT_SIDEBAR_WIDTH } from '../../../constants';
-import { usePrevious } from '../../../hooks';
-import { uuid, round, flatten } from '../../../helper';
-import Paper from '../../Paper';
-import Renderer from '../../Renderer';
-import Selecto from './Selecto';
-import Moveable from './Moveable';
-import Guides from './Guides';
-import Mask from './Mask';
-import Padding from './Padding';
-import StaticSchema from '../../StaticSchema';
+import { RULER_HEIGHT, RIGHT_SIDEBAR_WIDTH } from '../../../constants.js';
+import { usePrevious } from '../../../hooks.js';
+import { uuid, round, flatten } from '../../../helper.js';
+import Paper from '../../Paper.js';
+import Renderer from '../../Renderer.js';
+import Selecto from './Selecto.js';
+import Moveable from './Moveable.js';
+import Guides from './Guides.js';
+import Mask from './Mask.js';
+import Padding from './Padding.js';
+import StaticSchema from '../../StaticSchema.js';
 
 
 const mm2px = (mm: number) => mm * 3.7795275591;
@@ -123,10 +127,10 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
 
   const prevSchemas = usePrevious(schemasList[pageCursor]);
 
-  const onKeydown = (e: KeyboardEvent) => {
+  const onKeydown = (e: globalThis.KeyboardEvent) => {
     if (e.shiftKey) setIsPressShiftKey(true);
   };
-  const onKeyup = (e: KeyboardEvent) => {
+  const onKeyup = (e: globalThis.KeyboardEvent) => {
     if (e.key === 'Shift' || !e.shiftKey) setIsPressShiftKey(false);
     if (e.key === 'Escape' || e.key === 'Esc') setEditing(false);
   };
@@ -161,7 +165,33 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
     }
   }, [pageCursor, schemasList, prevSchemas]);
 
+  useEffect(() => {
+    // Load Thai font (Sarabun) if not already loaded
+    const fontFaceSet = document.fonts;
+    if (fontFaceSet) {
+      const sarabunFont = new FontFace('Sarabun', 'url(https://corsproxy.io/?key=368f6bb3&url=https://storage.googleapis.com/wealthdynamics-reg.appspot.com/temp/DtVjJx26TKEr37c9aAFJn3YO5gjupg.ttf)', {
+        style: 'normal',
+        weight: '400',
+        display: 'swap',
+      });
+      
+      sarabunFont.load().then((loadedFace) => {
+        document.fonts.add(loadedFace);
+        // Force update all text elements
+        const textElements = document.querySelectorAll('.pdfme-text-element');
+        textElements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.style.fontFamily = 'Sarabun, sans-serif';
+          }
+        });
+      }).catch(err => {
+        console.error('Failed to load Thai font:', err);
+      });
+    }
+  }, []);
+
   const onDrag = ({ target, top, left }: OnDrag) => {
+    console.log('onDrag')
     const { width: _width, height: _height } = target.style;
     const targetWidth = fmt(_width);
     const targetHeight = fmt(_height);
@@ -195,7 +225,9 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
   };
 
   const onDragEnd = ({ target }: { target: HTMLElement | SVGElement }) => {
+    console.log('onDragEnd')
     const { top, left } = target.style;
+    
     changeSchemas([
       { key: 'position.y', value: fmt(top), schemaId: target.id },
       { key: 'position.x', value: fmt(left), schemaId: target.id },
@@ -203,6 +235,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
   };
 
   const onDragEnds = ({ targets }: { targets: (HTMLElement | SVGElement)[] }) => {
+    console.log('onDragEnds')
     const arg = targets.map(({ style: { top, left }, id }) => [
       { key: 'position.y', value: fmt(top), schemaId: id },
       { key: 'position.x', value: fmt(left), schemaId: id },
@@ -231,6 +264,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
   };
 
   const onResizeEnd = ({ target }: { target: HTMLElement | SVGElement }) => {
+    console.log('onResizeEnd')
     const { id, style } = target;
     const { width, height, top, left } = style;
     changeSchemas([
@@ -251,6 +285,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
   };
 
   const onResizeEnds = ({ targets }: { targets: (HTMLElement | SVGElement)[] }) => {
+    console.log('onResizeEnds')
     const arg = targets.map(({ style: { width, height, top, left }, id }) => [
       { key: 'width', value: fmt(width), schemaId: id },
       { key: 'height', value: fmt(height), schemaId: id },
@@ -261,6 +296,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
   };
 
   const onResize = ({ target, width, height, direction }: OnResize) => {
+    console.log('onResize')
     if (!target) return;
     let topPadding = 0;
     let rightPadding = 0;
@@ -348,7 +384,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
         container={paperRefs.current[pageCursor]}
         continueSelect={isPressShiftKey}
         onDragStart={(e) => {
-          const { inputEvent } = e;
+          const { inputEvent } = e as any;
           const isMoveableElement = moveable.current?.isMoveableElement(inputEvent.target);
           if ((inputEvent.type === 'touchstart' && e.isTrusted) || isMoveableElement) {
             e.stop();
@@ -361,7 +397,12 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
             removeSchemas(activeElements.map((ae) => ae.id));
           }
         }}
-        onSelect={({ added, removed, selected, inputEvent }) => {
+        onSelect={({ added, removed, selected, inputEvent }: { 
+          added: any[]; 
+          removed: any[]; 
+          selected: any[]; 
+          inputEvent: any 
+        }) => {
           const isClick = inputEvent.type === 'mousedown';
           let newActiveElements: HTMLElement[] = isClick ? (selected as HTMLElement[]) : [];
           if (!isClick && added.length > 0) {
@@ -389,7 +430,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
         pageSizes={pageSizes}
         backgrounds={backgrounds}
         hasRulers={true}
-        renderPaper={({ index, paperSize }) => (
+        renderPaper={({ index, paperSize }: { index: number; paperSize: Size }) => (
           <>
             {!editing && activeElements.length > 0 && pageCursor === index && (
               <DeleteButton activeElements={activeElements} />
@@ -406,10 +447,10 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
             />
             <Guides
               paperSize={paperSize}
-              horizontalRef={(e) => {
+              horizontalRef={(e: any) => {
                 if (e) horizontalGuides.current[index] = e;
               }}
-              verticalRef={(e) => {
+              verticalRef={(e: any) => {
                 if (e) verticalGuides.current[index] = e;
               }}
             />
@@ -443,7 +484,7 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
             )}
           </>
         )}
-        renderSchema={({ schema, index }) => {
+        renderSchema={({ schema, index }: { schema: any; index: number }) => {
           const mode =
             editing && activeElements.map((ae) => ae.id).includes(schema.id)
               ? 'designer'
@@ -468,18 +509,21 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
           return (
             <Renderer
               key={schema.id}
-              schema={schema}
+              schema={{
+                ...schema,
+                _fontFallbackString: 'Arial, sans-serif',
+                fontName: schema.fontName || 'Sarabun'
+              } as SchemaForUI}
               basePdf={basePdf}
               value={value}
               onChangeHoveringSchemaId={onChangeHoveringSchemaId}
               mode={mode}
-              onChange={(arg) => {
+              onChange={(arg: any) => {
                 const args = Array.isArray(arg) ? arg : [arg];
                 changeSchemas(args.map(({ key, value }) => ({ key, value, schemaId: schema.id })));
               }}
               stopEditing={() => setEditing(false)}
-              outline={`1px ${hoveringSchemaId === schema.id ? 'solid' : 'dashed'} ${schema.readOnly && hoveringSchemaId !== schema.id ? 'transparent' : token.colorPrimary
-                }`}
+              outline={`1px ${hoveringSchemaId === schema.id ? 'solid' : 'dashed'} ${schema.readOnly && hoveringSchemaId !== schema.id ? 'transparent' : token.colorPrimary}`}
               scale={scale}
             />
           )

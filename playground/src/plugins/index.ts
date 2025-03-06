@@ -18,6 +18,11 @@ import {
 import { signature } from './signature';
 
 export const getPlugins = () => {
+  text.propPanel.defaultSchema.fontName = 'Sarabun';
+
+  console.log(text)
+
+
   return {
     Text: text,
     'Multi-Variable Text': multiVariableText,

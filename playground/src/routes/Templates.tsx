@@ -110,7 +110,6 @@ function TemplatesApp({ isEmbedded }: { isEmbedded: boolean }) {
         <div className="lg:flex items-center border-b border-dashed border-gray-200 pb-2">
           <p className="mt-4 text-md text-gray-600">
             If you can’t find the template you need, you can request it on Github.
-
           </p>
           <div className="mt-4 ml-auto">
             {React.createElement(ExternalButton, {

@@ -57,7 +57,7 @@ function FormAndViewerApp() {
         const inputsJson = JSON.parse(inputsString);
         inputs = inputsJson;
       }
-
+      
       ui.current = new (mode === "form" ? Form : Viewer)({
         domContainer: uiRef.current,
         template,

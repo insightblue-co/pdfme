@@ -20,9 +20,9 @@ export const getFontsData = (): Font => ({
   //   fallback: false,
   //   data: 'https://fonts.gstatic.com/s/notosansjp/v53/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75vY0rw-oME.ttf',
   // },
-  'PinyonScript-Regular': {
-    fallback: false,
-    data: 'https://fonts.gstatic.com/s/pinyonscript/v22/6xKpdSJbL9-e9LuoeQiDRQR8aOLQO4bhiDY.ttf',
+  'Sarabun': {
+    data: 'https://corsproxy.io/?key=368f6bb3&url=https://storage.googleapis.com/wealthdynamics-reg.appspot.com/temp/DtVjJx26TKEr37c9aAFJn3YO5gjupg.ttf',
+    fallback: false, // Set this font as the fallback font
   },
 });
 
@@ -109,6 +109,15 @@ export const generatePDF = async (currentRef: Designer | Form | Viewer | null) =
       ? (currentRef as Viewer | Form).getInputs()
       : getInputFromTemplate(template);
   const font = getFontsData();
+
+  console.log(font);
+  console.log(template)
+
+  template.schemas.map((schema) => {
+    schema.map((s) => {
+      s.fontName = 'Sarabun';
+    });
+  });
 
   try {
     const pdf = await generate({

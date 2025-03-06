@@ -1,7 +1,7 @@
 import type * as CSS from 'csstype';
 import type { Font as FontKitFont } from 'fontkit';
 import { UIRenderProps, getDefaultFont } from '@pdfme/common';
-import type { TextSchema } from './types';
+import type { TextSchema } from './types.js';
 import {
   DEFAULT_FONT_SIZE,
   DEFAULT_ALIGNMENT,
@@ -72,15 +72,24 @@ export const uiRender = async (arg: UIRenderProps<TextSchema>) => {
   const fontKitFont = await getFontKitFont(schema.fontName, font, _cache);
   const textBlock = buildStyledTextContainer(arg, fontKitFont, usePlaceholder ? placeholder : value);
 
-  const processedText = replaceUnsupportedChars(value, fontKitFont);
+  // Skip character replacement if fallback fonts are specified
+  const hasFallbackFonts = !!(schema as any)._fontFallbackString;
+  const processedText = hasFallbackFonts ? value : replaceUnsupportedChars(value, fontKitFont);
 
   if (!isEditable(mode, schema)) {
     // Read-only mode
+    // Use the same font-family approach for read-only mode
+    const fontFamily = schema.fontName 
+      ? (schema as any)._fontFallbackString 
+        ? `${schema.fontName}, ${(schema as any)._fontFallbackString}`
+        : `${schema.fontName}`
+      : 'inherit';
+    
     textBlock.innerHTML = processedText
       .split('')
       .map(
         (l, i) =>
-          `<span style="letter-spacing:${
+          `<span style="font-family: ${fontFamily}; letter-spacing:${
             String(value).length === i + 1 ? 0 : 'inherit'
           };">${l}</span>`
       )
@@ -202,7 +211,11 @@ export const buildStyledTextContainer = (arg: UIRenderProps<TextSchema>, fontKit
 
   const textBlockStyle: CSS.Properties = {
     // Font formatting styles
-    fontFamily: schema.fontName ? `'${schema.fontName}'` : 'inherit',
+    fontFamily: schema.fontName 
+      ? (schema as any)._fontFallbackString 
+        ? `${schema.fontName}, ${(schema as any)._fontFallbackString}`
+        : `${schema.fontName}`
+      : 'inherit',
     color: schema.fontColor ? schema.fontColor : DEFAULT_FONT_COLOR,
     fontSize: `${dynamicFontSize ?? schema.fontSize ?? DEFAULT_FONT_SIZE}pt`,
     letterSpacing: `${schema.characterSpacing ?? DEFAULT_CHARACTER_SPACING}pt`,
@@ -221,7 +234,7 @@ export const buildStyledTextContainer = (arg: UIRenderProps<TextSchema>, fontKit
   };
 
   const textBlock = document.createElement('div');
-  textBlock.id = 'text-' + String(schema.id);
+  textBlock.id = 'text-' + String((schema as any).id);
   Object.assign(textBlock.style, textBlockStyle);
 
   container.appendChild(textBlock);
