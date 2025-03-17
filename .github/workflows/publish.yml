@@ -62,7 +62,7 @@ jobs:
           
           # Create package.json
           echo '{
-            "name": "@insightblue/@pdfme",
+            "name": "@insightblue/pdfme",
             "version": "1.0.0",
             "description": "PDF generation library - InsightBlue fork",
             "main": "index.js",
@@ -72,7 +72,7 @@ jobs:
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
-              echo "      \"@insightblue/@pdfme/${PKG_NAME}\": \"^1.0.0\"," >> $TEMP_DIR/package.json
+              echo "      \"@insightblue/pdfme-${PKG_NAME}\": \"^1.0.0\"," >> $TEMP_DIR/package.json
             fi
           done
           
@@ -92,7 +92,7 @@ jobs:
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
-              echo "exports.${PKG_NAME} = require('@insightblue/@pdfme/${PKG_NAME}');" >> $TEMP_DIR/index.js
+              echo "exports.${PKG_NAME} = require('@insightblue/pdfme-${PKG_NAME}');" >> $TEMP_DIR/index.js
             fi
           done
           
@@ -131,7 +131,7 @@ jobs:
               BASE_NAME=$(node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
               
               # Set the new scoped name
-              npm pkg set name="@insightblue/@pdfme/${BASE_NAME}"
+              npm pkg set name="@insightblue/pdfme-${BASE_NAME}"
               
               # Bump version
               npm version $VERSION_TYPE --no-git-tag-version
