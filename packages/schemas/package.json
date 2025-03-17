@@ -1,6 +1,6 @@
 {
-  "name": "@pdfme/schemas",
-  "version": "0.0.0",
+  "name": "@insightblue-co/pdfme-schemas",
+  "version": "0.0.3",
   "sideEffects": false,
   "author": "hand-dot",
   "license": "MIT",
