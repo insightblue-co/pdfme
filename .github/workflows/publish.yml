@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://npm.pkg.github.com'
-          scope: '@insightblue'
+          scope: '@insightblue-co'
       
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -32,7 +32,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "@insightblue:registry=https://npm.pkg.github.com" > .npmrc
+          echo "@insightblue-co:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
           echo "auto-install-peers=true" >> .npmrc
           echo "strict-peer-dependencies=false" >> .npmrc
@@ -62,7 +62,7 @@ jobs:
           
           # Create package.json
           echo '{
-            "name": "@insightblue/pdfme",
+            "name": "@insightblue-co/pdfme",
             "version": "1.0.0",
             "description": "PDF generation library - InsightBlue fork",
             "main": "index.js",
@@ -72,7 +72,7 @@ jobs:
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
-              echo "      \"@insightblue/pdfme-${PKG_NAME}\": \"^1.0.0\"," >> $TEMP_DIR/package.json
+              echo "      \"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"," >> $TEMP_DIR/package.json
             fi
           done
           
@@ -92,7 +92,7 @@ jobs:
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
-              echo "exports.${PKG_NAME} = require('@insightblue/pdfme-${PKG_NAME}');" >> $TEMP_DIR/index.js
+              echo "exports.${PKG_NAME} = require('@insightblue-co/pdfme-${PKG_NAME}');" >> $TEMP_DIR/index.js
             fi
           done
           
@@ -131,7 +131,7 @@ jobs:
               BASE_NAME=$(node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
               
               # Set the new scoped name
-              npm pkg set name="@insightblue/pdfme-${BASE_NAME}"
+              npm pkg set name="@insightblue-co/pdfme-${BASE_NAME}"
               
               # Bump version
               npm version $VERSION_TYPE --no-git-tag-version
