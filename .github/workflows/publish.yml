@@ -61,7 +61,7 @@ jobs:
           echo "Creating main package in $TEMP_DIR"
           
           # Create initial package.json structure
-          echo '{"name":"@insightblue-co/pdfme","version":"1.0.0","description":"PDF generation library - InsightBlue fork","main":"index.js","dependencies":{' > $TEMP_DIR/package.json
+          echo '{"name":"@insightblue-co/pdfme","version":"0.0.0","description":"PDF generation library - InsightBlue fork","main":"index.js","dependencies":{' > $TEMP_DIR/package.json
           
           # Add dependencies
           FIRST=true
@@ -69,10 +69,10 @@ jobs:
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
               if [ "$FIRST" = true ]; then
-                echo "\"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
+                echo "\"@insightblue-co/pdfme-${PKG_NAME}\": \"^0.0.0\"" >> $TEMP_DIR/package.json
                 FIRST=false
               else
-                echo ",\"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
+                echo ",\"@insightblue-co/pdfme-${PKG_NAME}\": \"^0.0.0\"" >> $TEMP_DIR/package.json
               fi
             fi
           done
@@ -120,6 +120,32 @@ jobs:
             VERSION_TYPE="patch"
           fi
           
+          # Function to get latest version of a package
+          get_latest_version() {
+            local PKG_NAME=$1
+            npm view "@insightblue-co/${PKG_NAME}" version 2>/dev/null || echo "0.0.0"
+          }
+          
+          # Function to increment version
+          increment_version() {
+            local version=$1
+            local increment_type=$2
+            
+            IFS='.' read -r major minor patch <<< "$version"
+            
+            case $increment_type in
+              major)
+                echo "$((major + 1)).0.0"
+                ;;
+              minor)
+                echo "${major}.$((minor + 1)).0"
+                ;;
+              patch)
+                echo "${major}.${minor}.$((patch + 1))"
+                ;;
+            esac
+          }
+          
           # First publish individual packages
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
@@ -128,15 +154,18 @@ jobs:
               
               # Get the package name without any existing scope
               BASE_NAME=$(node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
+              SCOPED_NAME="pdfme-${BASE_NAME}"
               
-              # Set the new scoped name
-              npm pkg set name="@insightblue-co/pdfme-${BASE_NAME}"
+              # Get latest version and increment it
+              CURRENT_VERSION=$(get_latest_version "$SCOPED_NAME")
+              NEW_VERSION=$(increment_version "$CURRENT_VERSION" "$VERSION_TYPE")
               
-              # Bump version
-              npm version $VERSION_TYPE --no-git-tag-version
+              # Set the new scoped name and version
+              npm pkg set name="@insightblue-co/${SCOPED_NAME}"
+              npm pkg set version="$NEW_VERSION"
               
               # Publish package
-              npm publish
+              npm publish || echo "Package already exists, skipping..."
               
               cd ../..
             fi
@@ -144,8 +173,26 @@ jobs:
           
           # Publish main package
           cd $TEMP_DIR
-          npm version $VERSION_TYPE --no-git-tag-version
-          npm publish
+          
+          # Get latest version and increment it
+          CURRENT_VERSION=$(get_latest_version "pdfme")
+          NEW_VERSION=$(increment_version "$CURRENT_VERSION" "$VERSION_TYPE")
+          
+          # Update version
+          npm pkg set version="$NEW_VERSION"
+          
+          # Update dependency versions
+          for pkg in ../packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              BASE_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
+              SCOPED_NAME="pdfme-${BASE_NAME}"
+              DEP_VERSION=$(get_latest_version "$SCOPED_NAME")
+              npm pkg set "dependencies.@insightblue-co/${SCOPED_NAME}"="^${DEP_VERSION}"
+            fi
+          done
+          
+          # Publish main package
+          npm publish || echo "Package already exists, skipping..."
           cd ..
           
           # Cleanup
