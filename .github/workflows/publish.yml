@@ -60,42 +60,25 @@ jobs:
           TEMP_DIR=$(mktemp -d)
           echo "Creating main package in $TEMP_DIR"
           
-          # Start package.json with initial content
-          cat > $TEMP_DIR/package.json << 'EOF'
-{
-  "name": "@insightblue-co/pdfme",
-  "version": "1.0.0",
-  "description": "PDF generation library - InsightBlue fork",
-  "main": "index.js",
-  "dependencies": {
-EOF
+          # Create initial package.json structure
+          echo '{"name":"@insightblue-co/pdfme","version":"1.0.0","description":"PDF generation library - InsightBlue fork","main":"index.js","dependencies":{' > $TEMP_DIR/package.json
           
-          # Add dependencies (making sure to handle the last entry without comma)
+          # Add dependencies
           FIRST=true
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
               PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
               if [ "$FIRST" = true ]; then
-                echo "    \"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
+                echo "\"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
                 FIRST=false
               else
-                echo "    ,\"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
+                echo ",\"@insightblue-co/pdfme-${PKG_NAME}\": \"^1.0.0\"" >> $TEMP_DIR/package.json
               fi
             fi
           done
           
-          # Close the package.json
-          cat >> $TEMP_DIR/package.json << 'EOF'
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/insightblue-co/pdfme.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  }
-}
-EOF
+          # Close package.json
+          echo '},"repository":{"type":"git","url":"git+https://github.com/insightblue-co/pdfme.git"},"publishConfig":{"registry":"https://npm.pkg.github.com"}}' >> $TEMP_DIR/package.json
           
           # Create index.js
           echo '' > $TEMP_DIR/index.js
