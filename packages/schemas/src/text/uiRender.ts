@@ -72,7 +72,7 @@ export const uiRender = async (arg: UIRenderProps<TextSchema>) => {
   const fontKitFont = await getFontKitFont(schema.fontName, font, _cache);
   const textBlock = buildStyledTextContainer(arg, fontKitFont, usePlaceholder ? placeholder : value);
 
-  // Skip character replacement if fallback fonts are specified
+  // Skip character replacement entirely if fallback fonts are specified
   const hasFallbackFonts = !!(schema as any)._fontFallbackString;
   const processedText = hasFallbackFonts ? value : replaceUnsupportedChars(value, fontKitFont);
 

@@ -511,7 +511,9 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
               key={schema.id}
               schema={{
                 ...schema,
+                // Use only Arial and sans-serif as fallbacks
                 _fontFallbackString: 'Arial, sans-serif',
+                _hasFallbackFonts: true,
                 fontName: schema.fontName || 'Sarabun'
               } as SchemaForUI}
               basePdf={basePdf}

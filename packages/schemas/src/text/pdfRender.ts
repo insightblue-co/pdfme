@@ -1,6 +1,6 @@
-import { PDFFont, PDFDocument } from '@pdfme/pdf-lib';
+import * as pdfLib from '@pdfme/pdf-lib';
 import type { Font as FontKitFont } from 'fontkit';
-import type { TextSchema } from './types';
+import type { TextSchema } from './types.js';
 import {
   PDFRenderProps,
   ColorType,
@@ -31,17 +31,17 @@ import {
 import { convertForPdfLayoutProps, rotatePoint, hex2PrintingColor } from '../utils.js';
 
 const embedAndGetFontObj = async (arg: {
-  pdfDoc: PDFDocument;
+  pdfDoc: any;
   font: Font;
   _cache: Map<any, any>;
 }) => {
   const { pdfDoc, font, _cache } = arg;
   if (_cache.has(pdfDoc)) {
-    return _cache.get(pdfDoc) as { [key: string]: PDFFont };
+    return _cache.get(pdfDoc) as { [key: string]: any };
   }
 
   const fontValues = await Promise.all(
-    Object.values(font).map(async (v) => {
+    Object.values(font).map(async (v: any) => {
       let fontData = v.data;
       if (typeof fontData === 'string' && fontData.startsWith('http')) {
         fontData = await fetch(fontData).then((res) => res.arrayBuffer());
@@ -54,7 +54,7 @@ const embedAndGetFontObj = async (arg: {
 
   const fontObj = Object.keys(font).reduce(
     (acc, cur, i) => Object.assign(acc, { [cur]: fontValues[i] }),
-    {} as { [key: string]: PDFFont }
+    {} as { [key: string]: any }
   );
 
   _cache.set(pdfDoc, fontObj);
@@ -93,18 +93,43 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
 
   const { font = getDefaultFont(), colorType } = options;
 
-  const [pdfFontObj, fontKitFont] = await Promise.all([
-    embedAndGetFontObj({ pdfDoc, font, _cache }),
-    getFontKitFont(schema.fontName, font, _cache),
-  ]);
-  const fontProp = getFontProp({ value, fontKitFont, schema, colorType });
-
-  const { fontSize, color, alignment, verticalAlignment, lineHeight, characterSpacing } = fontProp;
-
+  const pdfFontObj = await embedAndGetFontObj({ pdfDoc, font, _cache });
+  
   const fontName = (
     schema.fontName ? schema.fontName : getFallbackFontName(font)
   ) as keyof typeof pdfFontObj;
   const pdfFontValue = pdfFontObj && pdfFontObj[fontName];
+  
+  console.log('Primary font:', fontName);
+  
+  const fallbackFontNames = (schema as any)._fontFallbackString 
+    ? (schema as any)._fontFallbackString.split(',').map((f: string) => f.trim())
+    : [];
+  
+  console.log('Fallback font names:', fallbackFontNames);
+  
+  const fallbackPdfFonts: any[] = [];
+
+  for (const fallbackName of fallbackFontNames) {
+    if (pdfFontObj[fallbackName]) {
+      fallbackPdfFonts.push(pdfFontObj[fallbackName]);
+      console.log('Found fallback font:', fallbackName);
+    } else {
+      console.log('Missing fallback font:', fallbackName);
+    }
+  }
+  
+  if (fallbackPdfFonts.length === 0 && pdfFontObj['Roboto']) {
+    fallbackPdfFonts.push(pdfFontObj['Roboto']);
+    console.log('Using Roboto as fallback font');
+  }
+  
+  console.log('Available fonts:', Object.keys(pdfFontObj));
+  
+  const fontKitFont = await getFontKitFont(schema.fontName, font, _cache);
+  const fontProp = getFontProp({ value, fontKitFont, schema, colorType });
+
+  const { fontSize, color, alignment, verticalAlignment, lineHeight, characterSpacing } = fontProp;
 
   const pageHeight = page.getHeight();
   const {
@@ -132,7 +157,6 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
     boxWidthInPt: width,
   });
 
-  // Text lines are rendered from the bottom upwards, we need to adjust the position down
   let yOffset = 0;
   if (verticalAlignment === VERTICAL_ALIGN_TOP) {
     yOffset = firstLineTextHeight + halfLineHeightAdjustment;
@@ -147,8 +171,19 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
     }
   }
 
-  const pivotPoint = { x: x + width / 2, y: pageHeight - mm2pt(schema.position.y) - height / 2 };
+  const pivotPoint = { 
+    x: x + width / 2, 
+    y: pageHeight - mm2pt((schema as any).position.y) - height / 2 
+  };
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+  const isCharSupportedByFont = (char: string, font: FontKitFont): boolean => {
+    try {
+      return font.hasGlyphForCodePoint(char.codePointAt(0) || 0);
+    } catch (e) {
+      return false;
+    }
+  };
 
   lines.forEach((line, rowIndex) => {
     const trimmed = line.replace('\n', '');
@@ -156,9 +191,7 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
     const textHeight = heightOfFontAtSize(fontKitFont, fontSize);
     const rowYOffset = lineHeight * fontSize * rowIndex;
 
-    // Adobe Acrobat Reader shows an error if `drawText` is called with an empty text
     if (line === '') {
-      // return; // this also works
       line = '\r\n';
     }
 
@@ -169,9 +202,8 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
       xLine += width - textWidth;
     }
 
-    let yLine = pageHeight - mm2pt(schema.position.y) - yOffset - rowYOffset;
+    let yLine = pageHeight - mm2pt((schema as any).position.y) - yOffset - rowYOffset;
 
-    // draw strikethrough
     if (schema.strikethrough && textWidth > 0) {
       const _x = xLine + textWidth + 1;
       const _y = yLine + textHeight / 3;
@@ -184,7 +216,6 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
       });
     }
 
-    // draw underline
     if (schema.underline && textWidth > 0) {
       const _x = xLine + textWidth + 1;
       const _y = yLine - textHeight / 12;
@@ -198,8 +229,6 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
     }
 
     if (rotate.angle !== 0) {
-      // As we draw each line individually from different points, we must translate each lines position
-      // relative to the UI rotation pivot point. see comments in convertForPdfLayoutProps() for more info.
       const rotatedPoint = rotatePoint({ x: xLine, y: yLine }, pivotPoint, rotate.angle);
       xLine = rotatedPoint.x;
       yLine = rotatedPoint.y;
@@ -207,22 +236,115 @@ export const pdfRender = async (arg: PDFRenderProps<TextSchema>) => {
 
     let spacing = characterSpacing;
     if (alignment === 'justify' && line.slice(-1) !== '\n') {
-      // if alignment is `justify` but the end of line is not newline, then adjust the spacing
       const iterator = segmenter.segment(trimmed)[Symbol.iterator]();
       const len = Array.from(iterator).length;
       spacing += (width - textWidth) / len;
     }
-    page.pushOperators(pdfLib.setCharacterSpacing(spacing));
+    page.pushOperators((pdfLib as any).setCharacterSpacing(spacing));
 
-    page.drawText(trimmed, {
-      x: xLine,
-      y: yLine,
-      rotate,
-      size: fontSize,
-      color,
-      lineHeight: lineHeight * fontSize,
-      font: pdfFontValue,
-      opacity,
-    });
+    if (fallbackPdfFonts.length > 0) {
+      const segments: { text: string; font: any }[] = [];
+      let currentSegment = '';
+      let currentFont = pdfFontValue;
+      
+      for (const char of trimmed) {
+        const isAsciiChar = char.charCodeAt(0) < 128;
+        
+        if (isAsciiChar && fallbackPdfFonts.length > 0) {
+          if (currentSegment) {
+            segments.push({ text: currentSegment, font: currentFont });
+            currentSegment = '';
+          }
+          
+          currentFont = fallbackPdfFonts[0];
+          currentSegment = char;
+          console.log(`ASCII character '${char}' using fallback font`);
+        } else if (isCharSupportedByFont(char, fontKitFont)) {
+          if (currentFont !== pdfFontValue && currentSegment) {
+            segments.push({ text: currentSegment, font: currentFont });
+            currentSegment = '';
+            currentFont = pdfFontValue;
+          }
+          
+          currentSegment += char;
+          console.log(`Supported character '${char}' using primary font`);
+        } else {
+          if (currentSegment) {
+            segments.push({ text: currentSegment, font: currentFont });
+            currentSegment = '';
+          }
+          
+          if (fallbackPdfFonts.length > 0) {
+            currentFont = fallbackPdfFonts[0];
+            currentSegment = char;
+            console.log(`Unsupported character '${char}' using fallback font`);
+          } else {
+            currentFont = pdfFontValue;
+            currentSegment = char;
+            console.log(`Unsupported character '${char}' using primary font (no fallback available)`);
+          }
+        }
+      }
+      
+      if (currentSegment) {
+        segments.push({ text: currentSegment, font: currentFont });
+      }
+      
+      let currentX = xLine;
+      for (const segment of segments) {
+        try {
+          // Debug log for rendering segment
+          console.log(`Rendering segment: '${segment.text}' with font`);
+          
+          page.drawText(segment.text, {
+            x: currentX,
+            y: yLine,
+            rotate,
+            size: fontSize,
+            color,
+            lineHeight: lineHeight * fontSize,
+            font: segment.font,
+            opacity,
+          });
+          
+          // Move the x position for the next segment
+          currentX += segment.font.widthOfTextAtSize(segment.text, fontSize);
+        } catch (e) {
+          console.error('Error rendering text segment:', e);
+          // If there's an error, try with the primary font
+          try {
+            // Debug log for fallback rendering
+            console.log(`Fallback rendering segment: '${segment.text}' with primary font`);
+            
+            page.drawText(segment.text, {
+              x: currentX,
+              y: yLine,
+              rotate,
+              size: fontSize,
+              color,
+              lineHeight: lineHeight * fontSize,
+              font: pdfFontValue,
+              opacity,
+            });
+            
+            // Move the x position for the next segment
+            currentX += pdfFontValue.widthOfTextAtSize(segment.text, fontSize);
+          } catch (e2) {
+            console.error('Error rendering text segment with primary font:', e2);
+          }
+        }
+      }
+    } else {
+      page.drawText(trimmed, {
+        x: xLine,
+        y: yLine,
+        rotate,
+        size: fontSize,
+        color,
+        lineHeight: lineHeight * fontSize,
+        font: pdfFontValue,
+        opacity,
+      });
+    }
   });
 };

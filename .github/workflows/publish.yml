@@ -1,0 +1,159 @@
+name: Publish Package to GitHub Packages
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@insightblue'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+      
+      - name: Setup .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "@insightblue:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
+          echo "auto-install-peers=true" >> .npmrc
+          echo "strict-peer-dependencies=false" >> .npmrc
+          echo "git-checks=false" >> .npmrc
+      
+      - name: Git config
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions@github.com'
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Build packages
+        run: pnpm run build
+      
+      - name: Stage and commit build files
+        run: |
+          git add .
+          git status
+          git commit -m "chore: update build files [skip ci]" || echo "No changes to commit"
+      
+      - name: Create main package file
+        run: |
+          TEMP_DIR=$(mktemp -d)
+          echo "Creating main package in $TEMP_DIR"
+          
+          # Create package.json
+          echo '{
+            "name": "@insightblue/@pdfme",
+            "version": "1.0.0",
+            "description": "PDF generation library - InsightBlue fork",
+            "main": "index.js",
+            "dependencies": {' > $TEMP_DIR/package.json
+          
+          # Add dependencies
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
+              echo "      \"@insightblue/@pdfme/${PKG_NAME}\": \"^1.0.0\"," >> $TEMP_DIR/package.json
+            fi
+          done
+          
+          # Close package.json
+          echo '    },
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/insightblue-co/pdfme.git"
+            },
+            "publishConfig": {
+              "registry": "https://npm.pkg.github.com"
+            }
+          }' >> $TEMP_DIR/package.json
+          
+          # Create index.js
+          echo '' > $TEMP_DIR/index.js
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              PKG_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
+              echo "exports.${PKG_NAME} = require('@insightblue/@pdfme/${PKG_NAME}');" >> $TEMP_DIR/index.js
+            fi
+          done
+          
+          echo "Created main package files in $TEMP_DIR"
+          echo "Contents of package.json:"
+          cat $TEMP_DIR/package.json
+          echo "Contents of index.js:"
+          cat $TEMP_DIR/index.js
+          
+          # Store temp dir path for next step
+          echo "TEMP_DIR=$TEMP_DIR" >> $GITHUB_ENV
+      
+      - name: Bump version and publish packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          # Determine version bump type
+          if echo "$COMMIT_MSG" | grep -i "major:"; then
+            VERSION_TYPE="major"
+          elif echo "$COMMIT_MSG" | grep -i "minor:"; then
+            VERSION_TYPE="minor"
+          else
+            VERSION_TYPE="patch"
+          fi
+          
+          # First publish individual packages
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              echo "Publishing $pkg"
+              cd $pkg
+              
+              # Get the package name without any existing scope
+              BASE_NAME=$(node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
+              
+              # Set the new scoped name
+              npm pkg set name="@insightblue/@pdfme/${BASE_NAME}"
+              
+              # Bump version
+              npm version $VERSION_TYPE --no-git-tag-version
+              
+              # Publish package
+              npm publish
+              
+              cd ../..
+            fi
+          done
+          
+          # Publish main package
+          cd $TEMP_DIR
+          npm version $VERSION_TYPE --no-git-tag-version
+          npm publish
+          cd ..
+          
+          # Cleanup
+          rm -rf $TEMP_DIR
+          
+          # Commit version bumps
+          git add .
+          git commit -m "chore: bump versions [skip ci]"
+          git push
+          git push --tags

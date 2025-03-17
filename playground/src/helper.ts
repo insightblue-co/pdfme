@@ -110,9 +110,6 @@ export const generatePDF = async (currentRef: Designer | Form | Viewer | null) =
       : getInputFromTemplate(template);
   const font = getFontsData();
 
-  console.log(font);
-  console.log(template)
-
   template.schemas.map((schema) => {
     schema.map((s) => {
       s.fontName = 'Sarabun';
