@@ -146,6 +146,9 @@ jobs:
             esac
           }
           
+          # Array to store version changes
+          declare -A VERSION_CHANGES
+          
           # First publish individual packages
           for pkg in packages/*; do
             if [ -f "$pkg/package.json" ]; then
@@ -160,9 +163,15 @@ jobs:
               CURRENT_VERSION=$(get_latest_version "$SCOPED_NAME")
               NEW_VERSION=$(increment_version "$CURRENT_VERSION" "$VERSION_TYPE")
               
+              # Store the version change
+              VERSION_CHANGES[$SCOPED_NAME]=$NEW_VERSION
+              
               # Set the new scoped name and version
               npm pkg set name="@insightblue-co/${SCOPED_NAME}"
               npm pkg set version="$NEW_VERSION"
+              
+              # Save package.json changes
+              git add package.json
               
               # Publish package
               npm publish || echo "Package already exists, skipping..."
@@ -186,7 +195,7 @@ jobs:
             if [ -f "$pkg/package.json" ]; then
               BASE_NAME=$(cd $pkg && node -p "require('./package.json').name.replace(/^@[^/]+\/?/, '')")
               SCOPED_NAME="pdfme-${BASE_NAME}"
-              DEP_VERSION=$(get_latest_version "$SCOPED_NAME")
+              DEP_VERSION=${VERSION_CHANGES[$SCOPED_NAME]}
               npm pkg set "dependencies.@insightblue-co/${SCOPED_NAME}"="^${DEP_VERSION}"
             fi
           done
@@ -198,8 +207,9 @@ jobs:
           # Cleanup
           rm -rf $TEMP_DIR
           
-          # Commit version bumps
-          git add .
-          git commit -m "chore: bump versions [skip ci]"
+          # Create version bump commit
+          cd $GITHUB_WORKSPACE
+          git add packages/*/package.json
+          git commit -m "chore: bump versions [skip ci]" || echo "No version changes to commit"
           git push
           git push --tags
