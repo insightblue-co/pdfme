@@ -13,13 +13,13 @@
     "react"
   ],
   "description": "TypeScript base PDF generator and React base UI. Open source, developed by the community, and completely free to use under the MIT license!",
-  "homepage": "https://pdfme.com",
+  "homepage": "https://github.com/insightblue-co/pdfme",
   "repository": {
     "type": "git",
-    "url": "git@github.com:pdfme/pdfme.git"
+    "url": "git@github.com:insightblue-co/pdfme.git"
   },
   "bugs": {
-    "url": "https://github.com/pdfme/pdfme/issues"
+    "url": "https://github.com/insightblue-co/pdfme/issues"
   },
   "main": "dist/cjs/src/index.js",
   "module": "dist/esm/src/index.js",
@@ -44,12 +44,12 @@
     "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "@pdfme/common": "*",
-    "@pdfme/pdf-lib": "*",
+    "@insightblue-co/pdfme-common": "*",
+    "@insightblue-co/pdfme-pdf-lib": "*",
     "pdfjs-dist": "^3.11.174"
   },
   "devDependencies": {
-    "@pdfme/generator": "file:../generator",
+    "@insightblue-co/pdfme-generator": "file:../generator",
     "@types/estree": "^1.0.6",
     "canvas": "^2.11.2"
   },

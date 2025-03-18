@@ -13,13 +13,13 @@
     "react"
   ],
   "description": "TypeScript base PDF generator and React base UI. Open source, developed by the community, and completely free to use under the MIT license!",
-  "homepage": "https://pdfme.com",
+  "homepage": "https://github.com/insightblue-co/pdfme",
   "repository": {
     "type": "git",
-    "url": "git@github.com:pdfme/pdfme.git"
+    "url": "git@github.com:insightblue-co/pdfme.git"
   },
   "bugs": {
-    "url": "https://github.com/pdfme/pdfme/issues"
+    "url": "https://github.com/insightblue-co/pdfme/issues"
   },
   "main": "dist/cjs/src/index.js",
   "module": "dist/esm/src/index.js",
@@ -48,18 +48,18 @@
     "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "@pdfme/pdf-lib": "*",
+    "@insightblue-co/pdfme-pdf-lib": "*",
     "atob": "^2.1.2",
     "fontkit": "^2.0.2"
   },
   "devDependencies": {
-    "@pdfme/common": "file:../common",
-    "@pdfme/converter": "file:../converter",
-    "@pdfme/schemas": "file:../schemas"
+    "@insightblue-co/pdfme-common": "file:../common",
+    "@insightblue-co/pdfme-converter": "file:../converter",
+    "@insightblue-co/pdfme-schemas": "file:../schemas"
   },
   "peerDependencies": {
-    "@pdfme/common": "latest",
-    "@pdfme/schemas": "latest"
+    "@insightblue-co/pdfme-common": "latest",
+    "@insightblue-co/pdfme-schemas": "latest"
   },
   "jest": {
     "resolver": "ts-jest-resolver",
@@ -67,7 +67,7 @@
       "<rootDir>/jest.setup.js"
     ],
     "moduleNameMapper": {
-      "^@pdfme/schemas/utils$": "<rootDir>/../schemas/src/utils.ts",
+      "^@insightblue-co/pdfme-schemas/utils$": "<rootDir>/../schemas/src/utils.ts",
       "^.+\\\\.(css|less|scss)$": "identity-obj-proxy"
     },
     "transformIgnorePatterns": [
